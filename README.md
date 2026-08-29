@@ -121,6 +121,30 @@ pio device monitor # 串口监视
 | 内存 | KB~MB | **128~256B**（缓冲缩至 96B，大表放 xdata）|
 | C99 特性 | 可用 | **C89 兼容**（无复合字面量，静态模块表）|
 
+### 六-c、MCU 专有模块
+
+除主仓库对应能力外，本仓库提供 3 个 **MCU 专有** 模块（寄存器 / 端口 GPIO / 芯片信息）。C51 的寄存器操作针对 8051 双地址空间：**SFR**（特殊功能寄存器 0x80-0xFF）与 **XRAM**（外部扩展 RAM 0x0000-0xFFFF），端口为 P0-P3：
+
+| 模块 | 类型 | 命令 | 说明 |
+|------|------|------|------|
+| RegAbility | Ability | `read_sfr <addr>` / `write_sfr <addr>,<value>` / `read_xram <addr>` / `write_xram <addr>,<value>` / `info` | SFR / XRAM 读写（fe_port 跳转表 + xdata 指针）|
+| GpioAbility | Ability | `mode <port>,<input\|output>` / `write <port>,<0x00-0xFF>` / `read <port>` / `info` | 8051 端口 P0-P3（port 0-3）|
+| ChipData | Data | `info` | 芯片型号 / RAM / Flash / 频率 |
+
+**示例：**
+
+```
+ability_RegAbility read_sfr 0x90        # 读 P1
+ability_RegAbility write_sfr 0x90,0xAA  # 写 P1
+ability_RegAbility read_xram 0x1234
+ability_RegAbility write_xram 0x1234,0x55
+ability_GpioAbility write 1,0x0F        # P1 输出
+ability_GpioAbility read 1
+data_ChipData info
+```
+
+> ⚠️ 寄存器操作直接访问硬件，误写可能导致系统异常，仅供调试/底层驱动使用。SDCC 版 `fe_port.c` 已提供 SFR 跳转表与 xdata 指针的真实实现。
+
 ### 七、与 FasterEdge 主仓库的对应关系
 
 - 命令名与主仓库**完全一致**，与 MCU-ESP32/ESP8266 实现同构

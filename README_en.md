@@ -121,6 +121,30 @@ pio device monitor # serial monitor
 
 > To change chips, edit `board` in `platformio.ini` (e.g. `stc15f2k60s2`); enable `-Dprintf=printf_large` for `%lu` formatting. Serial commands are identical to the keil version.
 
+### 6-c. MCU-Specific Modules
+
+Beyond the main-repo capabilities, this repo adds 3 **MCU-specific** modules. On C51, register access targets the 8051 dual address spaces: **SFR** (special function registers 0x80-0xFF) and **XRAM** (external RAM 0x0000-0xFFFF); ports are P0-P3:
+
+| Module | Type | Commands | Description |
+|--------|------|----------|-------------|
+| RegAbility | Ability | `read_sfr <addr>` / `write_sfr <addr>,<value>` / `read_xram <addr>` / `write_xram <addr>,<value>` / `info` | SFR / XRAM read-write (fe_port jump table + xdata pointer) |
+| GpioAbility | Ability | `mode <port>,<input|output>` / `write <port>,<0x00-0xFF>` / `read <port>` / `info` | 8051 ports P0-P3 (port 0-3) |
+| ChipData | Data | `info` | Chip model / RAM / Flash / freq |
+
+**Examples:**
+
+```
+ability_RegAbility read_sfr 0x90        # read P1
+ability_RegAbility write_sfr 0x90,0xAA  # write P1
+ability_RegAbility read_xram 0x1234
+ability_RegAbility write_xram 0x1234,0x55
+ability_GpioAbility write 1,0x0F        # P1 output
+ability_GpioAbility read 1
+data_ChipData info
+```
+
+> ⚠️ Register access touches hardware directly; a wrong write may crash the system. Debug/low-level use only. The SDCC `fe_port.c` ships a real SFR jump table + xdata pointer implementation.
+
 ### 7. Correspondence with the Main Repo
 
 - Command names are **identical** to the main repo, structurally identical to MCU-ESP32/ESP8266

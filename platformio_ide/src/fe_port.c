@@ -165,3 +165,78 @@ void fe_port_delay_ms(u32 ms) {
     for (; ms > 0; ms--)
         for (i = 0; i < FOSC / 1000UL / 4UL; i++) ;   // 近似 1ms
 }
+
+// ============================================================
+// 寄存器 / 存储空间读写（SDCC 真实实现）
+// ============================================================
+// SFR 无法用变量寻址，SDCC 中同样用跳转表（sfr 符号由 <8051.h> 提供）。
+u8 fe_port_sfr_read(u8 addr) {
+    switch (addr) {
+        case 0x80: return P0;
+        case 0x81: return SP;
+        case 0x82: return DPL;
+        case 0x83: return DPH;
+        case 0x88: return TCON;
+        case 0x89: return TMOD;
+        case 0x8A: return TL0;
+        case 0x8B: return TL1;
+        case 0x8C: return TH0;
+        case 0x8D: return TH1;
+        case 0x90: return P1;
+        case 0x98: return SCON;
+        case 0x99: return SBUF;
+        case 0xA0: return P2;
+        case 0xA8: return IE;
+        case 0xB0: return P3;
+        case 0xB8: return IP;
+        case 0xD0: return PSW;
+        case 0xE0: return ACC;
+        case 0xF0: return B;
+        default: return 0;
+    }
+}
+
+void fe_port_sfr_write(u8 addr, u8 val) {
+    switch (addr) {
+        case 0x80: P0 = val; break;
+        case 0x81: SP = val; break;
+        case 0x82: DPL = val; break;
+        case 0x83: DPH = val; break;
+        case 0x88: TCON = val; break;
+        case 0x89: TMOD = val; break;
+        case 0x8A: TL0 = val; break;
+        case 0x8B: TL1 = val; break;
+        case 0x8C: TH0 = val; break;
+        case 0x8D: TH1 = val; break;
+        case 0x90: P1 = val; break;
+        case 0x98: SCON = val; break;
+        case 0x99: SBUF = val; break;
+        case 0xA0: P2 = val; break;
+        case 0xA8: IE = val; break;
+        case 0xB0: P3 = val; break;
+        case 0xB8: IP = val; break;
+        case 0xD0: PSW = val; break;
+        case 0xE0: ACC = val; break;
+        case 0xF0: B = val; break;
+        default: break;
+    }
+}
+
+u8 fe_port_xram_read(u16 addr) {
+    return *((volatile u8 __xdata *)(u16)addr);
+}
+
+void fe_port_xram_write(u16 addr, u8 val) {
+    *((volatile u8 __xdata *)(u16)addr) = val;
+}
+
+// ============================================================
+// 芯片信息（SDCC 真实实现）
+// ============================================================
+void fe_port_chip_info(char *out, u16 outlen) {
+    // STC89C52RC 为例；换芯片改此处即可
+    fe_snprintf(out, outlen,
+                "{\"chip\":\"STC89C52RC\",\"arch\":\"MCS-51\","
+                "\"ramBytes\":256,\"flashBytes\":8192,\"freqMHz\":%lu}",
+                (unsigned long)(FOSC / 1000000UL));
+}

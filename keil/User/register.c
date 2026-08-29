@@ -30,6 +30,9 @@ static const fe_cmd_t s_config_cmds[] = {
     {"list", data_config_dispatch},
     {"snapshot", data_config_dispatch},
 };
+static const fe_cmd_t s_chip_cmds[] = {
+    {"info", data_chip_dispatch},
+};
 
 // ============================================================
 // Ability 命令表
@@ -77,12 +80,26 @@ static const fe_cmd_t s_modbus_cmds[] = {
     {"write_holding", ability_modbus_dispatch},
     {"write_coil", ability_modbus_dispatch},
 };
+static const fe_cmd_t s_reg_cmds[] = {
+    {"read_sfr", ability_reg_dispatch},
+    {"write_sfr", ability_reg_dispatch},
+    {"read_xram", ability_reg_dispatch},
+    {"write_xram", ability_reg_dispatch},
+    {"info", ability_reg_dispatch},
+};
+static const fe_cmd_t s_gpio_cmds[] = {
+    {"mode", ability_gpio_dispatch},
+    {"write", ability_gpio_dispatch},
+    {"read", ability_gpio_dispatch},
+    {"info", ability_gpio_dispatch},
+};
 
 // ============================================================
 // 模块定义（显式静态变量，C51 兼容）
 // ============================================================
 static fe_module_t s_data_base   = { "BaseData",   "框架元信息", s_base_cmds,     0, NULL,          data_base_dispatch };
 static fe_module_t s_data_config = { "ConfigData", "KV 配置(EEPROM)", s_config_cmds, 0, &g_config_data, data_config_dispatch };
+static fe_module_t s_data_chip   = { "ChipData",   "芯片信息(MCU 专有)", s_chip_cmds, 0, NULL,          data_chip_dispatch };
 
 static fe_module_t s_ability_base   = { "BaseAbility",   "基础",   s_ability_base_cmds, 0, NULL,          ability_base_dispatch };
 static fe_module_t s_ability_role   = { "RoleAbility",   "角色",   s_role_cmds,         0, &g_role,       ability_role_dispatch };
@@ -90,6 +107,8 @@ static fe_module_t s_ability_time   = { "TimeAbility",   "时间",   s_time_cmds
 static fe_module_t s_ability_onekey = { "OneKeyAbility", "一键令牌", s_onekey_cmds,     0, &g_onekey,     ability_onekey_dispatch };
 static fe_module_t s_ability_serial = { "SerialAbility", "串口",   s_serial_cmds,       0, &g_serial,     ability_serial_dispatch };
 static fe_module_t s_ability_modbus = { "ModbusAbility", "Modbus", s_modbus_cmds,       0, &g_modbus,     ability_modbus_dispatch };
+static fe_module_t s_ability_reg    = { "RegAbility",    "寄存器操作(专有)", s_reg_cmds, 0, NULL,      ability_reg_dispatch };
+static fe_module_t s_ability_gpio   = { "GpioAbility",   "端口 GPIO(专有)", s_gpio_cmds, 0, NULL,      ability_gpio_dispatch };
 
 // ============================================================
 // 注册 Data
@@ -97,9 +116,11 @@ static fe_module_t s_ability_modbus = { "ModbusAbility", "Modbus", s_modbus_cmds
 void fe_register_all_data(fe_atom_t *atom) {
     s_data_base.cmd_count   = (u8)(sizeof(s_base_cmds)   / sizeof(s_base_cmds[0]));
     s_data_config.cmd_count = (u8)(sizeof(s_config_cmds) / sizeof(s_config_cmds[0]));
+    s_data_chip.cmd_count   = (u8)(sizeof(s_chip_cmds)   / sizeof(s_chip_cmds[0]));
     g_config_data.base_addr = 0x0000;
     fe_register_data(atom, &s_data_base);
     fe_register_data(atom, &s_data_config);
+    fe_register_data(atom, &s_data_chip);
 }
 
 // ============================================================
@@ -112,6 +133,8 @@ void fe_register_all_abilities(fe_atom_t *atom) {
     s_ability_onekey.cmd_count = (u8)(sizeof(s_onekey_cmds)       / sizeof(s_onekey_cmds[0]));
     s_ability_serial.cmd_count = (u8)(sizeof(s_serial_cmds)       / sizeof(s_serial_cmds[0]));
     s_ability_modbus.cmd_count = (u8)(sizeof(s_modbus_cmds)       / sizeof(s_modbus_cmds[0]));
+    s_ability_reg.cmd_count    = (u8)(sizeof(s_reg_cmds)          / sizeof(s_reg_cmds[0]));
+    s_ability_gpio.cmd_count   = (u8)(sizeof(s_gpio_cmds)         / sizeof(s_gpio_cmds[0]));
 
     g_serial.open = FALSE;
     g_serial.baud = 115200;
@@ -124,6 +147,8 @@ void fe_register_all_abilities(fe_atom_t *atom) {
     fe_register_ability(atom, &s_ability_onekey);
     fe_register_ability(atom, &s_ability_serial);
     fe_register_ability(atom, &s_ability_modbus);
+    fe_register_ability(atom, &s_ability_reg);
+    fe_register_ability(atom, &s_ability_gpio);
 }
 
 // ============================================================

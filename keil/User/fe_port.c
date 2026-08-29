@@ -125,6 +125,42 @@ void fe_port_delay_ms(u32 ms) {
         for (i = 0; i < 1000; i++) ;
 }
 
+// ============================================================
+// 寄存器 / 存储空间读写
+// ============================================================
+// TODO: SFR 读写无法用运行时变量直接寻址，需按目标芯片做跳转表或
+//       直接访问（如 P0=0x80/P1=0x90/...）；XRAM 用 xdata 指针。
+//   #define SFR_P0 0x80 ...（见文件末尾参考）
+u8 fe_port_sfr_read(u8 addr) {
+    // TODO: 按 addr 返回 SFR 值（0x80-0xFF 常用寄存器）
+    (void)addr;
+    return 0;
+}
+
+void fe_port_sfr_write(u8 addr, u8 val) {
+    // TODO: 按 addr 写 SFR（0x80-0xFF 常用寄存器）
+    (void)addr; (void)val;
+}
+
+u8 fe_port_xram_read(u16 addr) {
+    // TODO: 返回 xdata[addr]（Keil: *(volatile u8 xdata*)addr）
+    (void)addr;
+    return 0;
+}
+
+void fe_port_xram_write(u16 addr, u8 val) {
+    // TODO: xdata[addr] = val
+    (void)addr; (void)val;
+}
+
+// ============================================================
+// 芯片信息
+// ============================================================
+void fe_port_chip_info(char *out, u16 outlen) {
+    // TODO: 填写目标 8051 型号与资源，如 STC89C52 / AT89S52
+    fe_snprintf(out, outlen, "{\"chip\":\"8051\",\"arch\":\"MCS-51\",\"ramBytes\":256}");
+}
+
 /*
  * ============================================================
  * STC89/STC15（内部 EEPROM/IAP）参考实现片段
@@ -159,6 +195,41 @@ void fe_port_delay_ms(u32 ms) {
  *   //   *out = i2c_read(0); i2c_stop();
  *   // 写：i2c_start(); i2c_write(0xA0); i2c_write(addr);
  *   //     i2c_write(byte); i2c_stop(); 延时 5ms 等内部写周期
+ *
+ * ============================================================
+ * SFR / XRAM / 芯片信息参考（Keil C51）
+ * ============================================================
+ *   // 常用 SFR 地址：P0=0x80 P1=0x90 P2=0xA0 P3=0xB0
+ *   //   PSW=0xD0 ACC=0xE0 B=0xF0 SP=0x81 DPL=0x82 DPH=0x83
+ *   //   TCON=0x88 TMOD=0x89 TL0=0x8A TL1=0x8B TH0=0x8C TH1=0x8D
+ *   //   SCON=0x98 SBUF=0x99 IE=0xA8 IP=0xB8
+ *   // Keil 中 sfr 声明后用跳转表按地址访问，或直接写专用函数：
+ *   u8 fe_port_sfr_read(u8 addr) {
+ *       switch (addr) {
+ *           case 0x80: return P0;  case 0x90: return P1;
+ *           case 0xA0: return P2;  case 0xB0: return P3;
+ *           case 0x88: return TCON; case 0x98: return SCON;
+ *           default: return 0;
+ *       }
+ *   }
+ *   void fe_port_sfr_write(u8 addr, u8 val) {
+ *       switch (addr) {
+ *           case 0x80: P0 = val; break; case 0x90: P1 = val; break;
+ *           case 0xA0: P2 = val; break; case 0xB0: P3 = val; break;
+ *           default: break;
+ *       }
+ *   }
+ *   u8 fe_port_xram_read(u16 addr) {
+ *       return *(volatile u8 xdata *)addr;
+ *   }
+ *   void fe_port_xram_write(u16 addr, u8 val) {
+ *       *(volatile u8 xdata *)addr = val;
+ *   }
+ *   void fe_port_chip_info(char *out, u16 l) {
+ *       // 以 STC89C52RC 为例
+ *       fe_snprintf(out, l, "{\"chip\":\"STC89C52RC\",\"arch\":\"MCS-51\","
+ *                   "\"ramBytes\":256,\"flashBytes\":8192,\"freqMHz\":12}");
+ *   }
  *
  * ============================================================
  */

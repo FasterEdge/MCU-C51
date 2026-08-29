@@ -66,6 +66,18 @@ typedef struct {
 fe_output_t ability_modbus_dispatch(void *inst, const char *act, const char *args);
 
 // ============================================================
+// RegAbility —— MCU 专有·寄存器/存储空间操作：
+//               read_sfr / write_sfr / read_xram / write_xram / info
+// ============================================================
+fe_output_t ability_reg_dispatch(void *inst, const char *act, const char *args);
+
+// ============================================================
+// GpioAbility —— MCU 专有·端口 GPIO 控制：mode / write / read / info
+// （8051 P0-P3 端口，port 编号 0-3）
+// ============================================================
+fe_output_t ability_gpio_dispatch(void *inst, const char *act, const char *args);
+
+// ============================================================
 // 注册全部 Ability（register.c 调用）
 // ============================================================
 void fe_register_all_abilities(fe_atom_t *atom);
