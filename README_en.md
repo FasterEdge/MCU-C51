@@ -104,7 +104,7 @@ data_BaseData info
 | RAM | KB~MB | **128-256B** (buffers shrunk to 96B, big tables in xdata) |
 | C99 features | allowed | **C89-compatible** (no compound literals; static module tables) |
 
-### 6-b. PlatformIO IDE Version (VS Code plugin)
+### 7. PlatformIO IDE Version (VS Code plugin)
 
 `platformio_ide/` is the **SDCC compiler** version (PlatformIO STC platform) that reuses the keil C code with an SDCC-compatible `fe_port.c` (8051 register-level UART polling / baud timer; EEPROM and time remain TODO). No Keil needed — build and flash right from VS Code.
 
@@ -121,7 +121,7 @@ pio device monitor # serial monitor
 
 > To change chips, edit `board` in `platformio.ini` (e.g. `stc15f2k60s2`); enable `-Dprintf=printf_large` for `%lu` formatting. Serial commands are identical to the keil version.
 
-### 6-c. MCU-Specific Modules
+### 8. MCU-Specific Modules
 
 Beyond the main-repo capabilities, this repo adds 3 **MCU-specific** modules. On C51, register access targets the 8051 dual address spaces: **SFR** (special function registers 0x80-0xFF) and **XRAM** (external RAM 0x0000-0xFFFF); ports are P0-P3:
 
@@ -145,14 +145,14 @@ data_ChipData info
 
 > ⚠️ Register access touches hardware directly; a wrong write may crash the system. Debug/low-level use only. The SDCC `fe_port.c` ships a real SFR jump table + xdata pointer implementation.
 
-### 7. Correspondence with the Main Repo
+### 9. Correspondence with the Main Repo
 
 - Command names are **identical** to the main repo, structurally identical to MCU-ESP32/ESP8266
 - `Atom` model: singleton global Atom with `data_` / `ability_` prefix routing
 - Tokens use HMAC-SHA256 (pure C, no mbedTLS); secrets persisted in EEPROM
 - Modbus register tables in RAM; RTU frame service entry `modbus_slave_service()` reserved
 
-### 8. Sister Projects
+### 10. Sister Projects
 
 - **[FasterEdge MCU - ESP32](https://github.com/FasterEdge/MCU-ESP32)**: 9 Abilities + 4 Data
 - **[FasterEdge MCU - ESP8266](https://github.com/FasterEdge/MCU-ESP8266)**: 9 Abilities + 4 Data

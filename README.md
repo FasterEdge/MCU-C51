@@ -102,7 +102,7 @@ data_BaseData info
 | 存储 | NVS / Flash | EEPROM（STC IAP 或 24C02）|
 | 网络 | 有 | **无**（能力子集剔除网络项）|
 
-### 六-b、PlatformIO IDE 版使用（VS Code 插件）
+### 七、PlatformIO IDE 版使用（VS Code 插件）
 
 `platformio_ide/` 是 **SDCC 编译器版** 工程（PlatformIO STC 平台），复用 keil 版 C 代码，`fe_port.c` 为 SDCC 兼容的 8051 寄存器级实现（UART 轮询收发 / 波特率定时器 / TODO 留 EEPROM 与时间）。无需 Keil 即可在 VS Code 中编译烧录。
 
@@ -121,7 +121,7 @@ pio device monitor # 串口监视
 | 内存 | KB~MB | **128~256B**（缓冲缩至 96B，大表放 xdata）|
 | C99 特性 | 可用 | **C89 兼容**（无复合字面量，静态模块表）|
 
-### 六-c、MCU 专有模块
+### 八、MCU 专有模块
 
 除主仓库对应能力外，本仓库提供 3 个 **MCU 专有** 模块（寄存器 / 端口 GPIO / 芯片信息）。C51 的寄存器操作针对 8051 双地址空间：**SFR**（特殊功能寄存器 0x80-0xFF）与 **XRAM**（外部扩展 RAM 0x0000-0xFFFF），端口为 P0-P3：
 
@@ -145,14 +145,14 @@ data_ChipData info
 
 > ⚠️ 寄存器操作直接访问硬件，误写可能导致系统异常，仅供调试/底层驱动使用。SDCC 版 `fe_port.c` 已提供 SFR 跳转表与 xdata 指针的真实实现。
 
-### 七、与 FasterEdge 主仓库的对应关系
+### 九、与 FasterEdge 主仓库的对应关系
 
 - 命令名与主仓库**完全一致**，与 MCU-ESP32/ESP8266 实现同构
 - `Atom` 模型：单例全局 Atom，`data_` / `ability_` 前缀路由
 - 令牌用 HMAC-SHA256（纯 C，无 mbedTLS），密钥 EEPROM 持久化
 - Modbus 寄存器表存 RAM，RTU 帧服务入口 `modbus_slave_service()` 已预留
 
-### 八、姊妹项目
+### 十、姊妹项目
 
 - **[FasterEdge MCU - ESP32](https://github.com/FasterEdge/MCU-ESP32)**：9 Ability + 4 Data
 - **[FasterEdge MCU - ESP8266](https://github.com/FasterEdge/MCU-ESP8266)**：9 Ability + 4 Data
