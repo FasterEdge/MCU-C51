@@ -48,14 +48,21 @@ This project is the **8051 (C51)** MCU implementation of the **[FasterEdge](http
 
 ```
 MCU-C51/
-└── keil/                       # Keil C51 version (the only version)
-    ├── MDK-ARM/                # FasterEdge-MCU-C51.uvproj (Keil C51 project)
-    ├── Core/                   # fe.h / fe.c / fe_hmac_sha256.c (pure C)
-    ├── Inc/                    # fe_ability.h / fe_data.h / fe_port.h
-    ├── Ability/                # ability_*.c (6)
-    ├── Data/                   # data_*.c (2)
-    └── User/                   # main.c / register.c / fe_port.c (port layer)
+├── keil/                       # Keil C51 version (uVision project)
+│   ├── MDK-ARM/                # FasterEdge-MCU-C51.uvproj (Keil C51 project)
+│   ├── Core/                   # fe.h / fe.c / fe_hmac_sha256.c (pure C)
+│   ├── Inc/                    # fe_ability.h / fe_data.h / fe_port.h
+│   ├── Ability/                # ability_*.c (6)
+│   ├── Data/                   # data_*.c (2)
+│   └── User/                   # main.c / register.c / fe_port.c (port layer)
+└── platformio_ide/             # VS Code + PlatformIO plugin project (STC platform + SDCC)
+    ├── platformio.ini          # stc / stc89c52rc (or stc15f2k60s2)
+    ├── .vscode/extensions.json # recommends PlatformIO IDE
+    ├── include/                # fe.h / fe_ability.h / fe_data.h / fe_port.h / fe_hmac_sha256.h
+    └── src/                    # reuses keil bare-metal C + SDCC fe_port (8051 register-level)
 ```
+
+> C51 has no Arduino version; two bare-metal C toolchains: `keil/` (Keil C51) and `platformio_ide/` (SDCC, VS Code plugin); same capabilities and commands.
 
 ### 5. Usage
 
@@ -96,6 +103,23 @@ data_BaseData info
 | Network | yes | **no** (network capabilities removed) |
 | RAM | KB~MB | **128-256B** (buffers shrunk to 96B, big tables in xdata) |
 | C99 features | allowed | **C89-compatible** (no compound literals; static module tables) |
+
+### 6-b. PlatformIO IDE Version (VS Code plugin)
+
+`platformio_ide/` is the **SDCC compiler** version (PlatformIO STC platform) that reuses the keil C code with an SDCC-compatible `fe_port.c` (8051 register-level UART polling / baud timer; EEPROM and time remain TODO). No Keil needed — build and flash right from VS Code.
+
+1. Install the **PlatformIO IDE** extension in VS Code (prompted when opening `platformio_ide/`)
+2. Open the `platformio_ide/` directory
+3. Click **Build** / **Upload** / **Serial Monitor** (115200) in the status bar
+
+```bash
+cd platformio_ide
+pio run            # build (generates HEX)
+pio run -t upload  # flash
+pio device monitor # serial monitor
+```
+
+> To change chips, edit `board` in `platformio.ini` (e.g. `stc15f2k60s2`); enable `-Dprintf=printf_large` for `%lu` formatting. Serial commands are identical to the keil version.
 
 ### 7. Correspondence with the Main Repo
 

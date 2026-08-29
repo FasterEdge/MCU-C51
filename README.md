@@ -48,14 +48,21 @@
 
 ```
 MCU-C51/
-└── keil/                       # Keil C51 版（唯一版本）
-    ├── MDK-ARM/                # FasterEdge-MCU-C51.uvproj（Keil C51 工程）
-    ├── Core/                   # fe.h / fe.c / fe_hmac_sha256.c（纯 C）
-    ├── Inc/                    # fe_ability.h / fe_data.h / fe_port.h
-    ├── Ability/                # ability_*.c（6 个）
-    ├── Data/                   # data_*.c（2 个）
-    └── User/                   # main.c / register.c / fe_port.c（移植层）
+├── keil/                       # Keil C51 版（uVision 工程）
+│   ├── MDK-ARM/                # FasterEdge-MCU-C51.uvproj（Keil C51 工程）
+│   ├── Core/                   # fe.h / fe.c / fe_hmac_sha256.c（纯 C）
+│   ├── Inc/                    # fe_ability.h / fe_data.h / fe_port.h
+│   ├── Ability/                # ability_*.c（6 个）
+│   ├── Data/                   # data_*.c（2 个）
+│   └── User/                   # main.c / register.c / fe_port.c（移植层）
+└── platformio_ide/             # VS Code + PlatformIO 插件工程（STC 平台 + SDCC）
+    ├── platformio.ini          # stc / stc89c52rc（或 stc15f2k60s2）
+    ├── .vscode/extensions.json # 推荐 PlatformIO IDE 插件
+    ├── include/                # fe.h / fe_ability.h / fe_data.h / fe_port.h / fe_hmac_sha256.h
+    └── src/                    # 复用 keil 裸机 C + SDCC 版 fe_port（8051 寄存器级实现）
 ```
+
+> C51 无 Arduino 版；两套裸机 C 工具链：`keil/`（Keil C51）与 `platformio_ide/`（SDCC，VS Code 插件），能力与命令完全一致。
 
 ### 五、使用说明
 
@@ -94,6 +101,23 @@ data_BaseData info
 | int 位宽 | 32 位 | **16 位**（代码避免依赖 int 位宽）|
 | 存储 | NVS / Flash | EEPROM（STC IAP 或 24C02）|
 | 网络 | 有 | **无**（能力子集剔除网络项）|
+
+### 六-b、PlatformIO IDE 版使用（VS Code 插件）
+
+`platformio_ide/` 是 **SDCC 编译器版** 工程（PlatformIO STC 平台），复用 keil 版 C 代码，`fe_port.c` 为 SDCC 兼容的 8051 寄存器级实现（UART 轮询收发 / 波特率定时器 / TODO 留 EEPROM 与时间）。无需 Keil 即可在 VS Code 中编译烧录。
+
+1. VS Code 安装 **PlatformIO IDE** 插件（打开 `platformio_ide/` 时自动提示）
+2. 打开 `platformio_ide/` 目录
+3. 底部状态栏点击 **Build** / **Upload** / **Serial Monitor**（115200）
+
+```bash
+cd platformio_ide
+pio run            # 编译（生成 HEX）
+pio run -t upload  # 烧录
+pio device monitor # 串口监视
+```
+
+> 换芯片：编辑 `platformio.ini` 将 `board` 改为 `stc15f2k60s2` 等其他 STC 板型；需要 `%lu` 长格式化时放开 `-Dprintf=printf_large`。串口命令与 keil 版完全一致。
 | 内存 | KB~MB | **128~256B**（缓冲缩至 96B，大表放 xdata）|
 | C99 特性 | 可用 | **C89 兼容**（无复合字面量，静态模块表）|
 
