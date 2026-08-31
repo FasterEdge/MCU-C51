@@ -1,3 +1,7 @@
+/* FasterEdge 开源项目
+ * GitHub: https://github.com/FasterEdge
+ * Gitee:  https://gitee.com/FasterEdge
+ */
 // fe_port.c — FasterEdge MCU 平台移植层实现（C51/8051 版，Keil C51 工具链）
 // 目标芯片：AT89C52（uvproj Device）。外接 24Cxx I2C EEPROM（默认 P1.0=SCL, P1.1=SDA）。
 // 换用 STC 系列（内置 IAP）时，按文件末尾参考把 EEPROM 换成 IAP 实现即可。
