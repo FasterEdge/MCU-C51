@@ -20,11 +20,14 @@ typedef struct {
 fe_output_t ability_role_dispatch(void *inst, const char *act, const char *args);
 
 // ============================================================
-// TimeAbility —— sync_manual / sync_system / get_time
-// （C51 无网络，不含 sync_ntp；configure_run 为 TODO 占位）
+// TimeAbility —— sync_manual / sync_system / get_time / configure_run
+// 无网络：configure_run 记录可由主循环消费的周期调度状态。
 // ============================================================
 typedef struct {
     u32 manual_epoch;
+    u32 run_interval;
+    u32 next_run;
+    u8  run_enabled;
 } time_ability_t;
 fe_output_t ability_time_dispatch(void *inst, const char *act, const char *args);
 
@@ -64,6 +67,8 @@ typedef struct {
     u8    discrete_inputs[32];
 } modbus_ability_t;
 fe_output_t ability_modbus_dispatch(void *inst, const char *act, const char *args);
+// 处理一个完整 Modbus RTU ADU，并通过 fe_port_uart_write(0, ...) 回写响应。
+void modbus_slave_service(modbus_ability_t *self, const u8 *req, u16 len);
 
 // ============================================================
 // RegAbility —— MCU 专有·寄存器/存储空间操作：

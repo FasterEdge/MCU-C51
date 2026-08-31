@@ -15,6 +15,21 @@
 #endif
 
 // ============================================================
+// STC89C52RC 内置 EEPROM（IAP）寄存器（SDCC：__sfr __at 声明）
+// STC89 系列 IAP 寄存器位于 0xE2-0xE7；STC15/STC8 系列为 0xC2-0xC7。
+// 换用其他 STC 型号时按数据手册调整地址即可。
+// ============================================================
+__sfr __at(0xE2) IAP_DATA;
+__sfr __at(0xE3) IAP_ADDRH;
+__sfr __at(0xE4) IAP_ADDRL;
+__sfr __at(0xE5) IAP_CMD;
+__sfr __at(0xE6) IAP_TRIG;
+__sfr __at(0xE7) IAP_CONTR;
+
+// 512B 数据扇区（STC89 系列数据手册）
+#define FE_IAP_SECTOR 512
+
+// ============================================================
 // 格式化输出
 // ============================================================
 // 委托标准 vsprintf（SDCC 默认链接 printf 支持 %d/%u/%x/%s；
@@ -95,66 +110,151 @@ void fe_port_uart_close(u8 port) {
 }
 
 // ============================================================
-// EEPROM（存储配置/密钥）
+// EEPROM（存储配置/密钥）——STC89 内置 IAP 实现
+// 写前先整扇区擦除（IAP 只能把 1 写为 0），扇区 512B。
 // ============================================================
-// STC 系列 8051 内置 EEPROM（IAP）。SDCC 访问 IAP 寄存器：
-//   IAP_CONTR/ IAP_CMD/ IAP_TRIG/ IAP_ADDRH/ IAP_ADDRL/ IAP_DATA
-// 参考（STC15）：
-//   void iap_operate(u8 cmd, u16 addr, u8 *data) {
-//       IAP_CONTR = 0x80; IAP_CMD = cmd;
-//       IAP_ADDRL = addr; IAP_ADDRH = addr >> 8;
-//       IAP_TRIG = 0x5A; IAP_TRIG = 0xA5;   // 触发
-//       if (cmd == 1) *data = IAP_DATA;     // 读
-//       else if (cmd == 2) IAP_DATA = *data; // 写
-//       IAP_CONTR = 0; IAP_CMD = 0; IAP_TRIG = 0;
-//   }
-//   写需先擦除扇区（cmd=3）。本文件留 TODO 供目标芯片补齐。
+static void iap_idle(void) {
+    IAP_CONTR = 0; IAP_CMD = 0; IAP_TRIG = 0;
+    IAP_ADDRH = 0; IAP_ADDRL = 0;
+}
 
+// 读一个字节
+static u8 iap_read(u16 addr) {
+    u8 d;
+    IAP_CONTR = 0x80; IAP_CMD = 1;
+    IAP_ADDRL = (u8)addr; IAP_ADDRH = (u8)(addr >> 8);
+    IAP_TRIG = 0x5A; IAP_TRIG = 0xA5;
+    d = IAP_DATA;
+    iap_idle();
+    return d;
+}
+
+// 写一个字节（只允许 1->0；整扇区写入前必须先擦除）
+static void iap_write(u16 addr, u8 d) {
+    IAP_CONTR = 0x80; IAP_CMD = 2;
+    IAP_ADDRL = (u8)addr; IAP_ADDRH = (u8)(addr >> 8);
+    IAP_DATA = d;
+    IAP_TRIG = 0x5A; IAP_TRIG = 0xA5;
+    iap_idle();
+}
+
+// 擦除一个扇区（addr 为扇区起始地址）
+static void iap_erase(u16 addr) {
+    IAP_CONTR = 0x80; IAP_CMD = 3;
+    IAP_ADDRL = (u8)addr; IAP_ADDRH = (u8)(addr >> 8);
+    IAP_TRIG = 0x5A; IAP_TRIG = 0xA5;
+    iap_idle();
+}
+
+// 读字符串：从 addr 连续读，直至 NUL 或缓冲满
 u8 fe_port_eeprom_get_str(u16 addr, char *out, u16 outlen) {
-    // TODO: 用 IAP 读 addr 处字符串
-    (void)addr; (void)out; (void)outlen;
-    if (outlen) out[0] = 0;
-    return FALSE;
+    u16 i;
+    if (!out || outlen == 0) return FALSE;
+    for (i = 0; i + 1 < outlen; i++) {
+        u8 c = iap_read((u16)(addr + i));
+        out[i] = (char)c;
+        if (c == 0) return TRUE;
+    }
+    out[outlen - 1] = 0;
+    return TRUE;
 }
 
+// 写字符串：读回所在扇区、更新、擦除、重写（原子扇区替换）
 u8 fe_port_eeprom_set_str(u16 addr, const char *value) {
-    // TODO: 用 IAP 写字符串到 addr
-    (void)addr; (void)value;
+    u16 base = (u16)(addr & (u16)~(FE_IAP_SECTOR - 1));
+    u16 i, off = (u16)(addr - base);
+    __xdata u8 page[FE_IAP_SECTOR];  // SDCC：显式 xdata（8051 片上 RAM 仅 256B）
+    for (i = 0; i < FE_IAP_SECTOR; i++)
+        page[i] = iap_read((u16)(base + i));
+    for (i = 0; value[i] && off + i < FE_IAP_SECTOR; i++)
+        page[off + i] = (u8)value[i];
+    if (off + i < FE_IAP_SECTOR) page[off + i] = 0;
+    iap_erase(base);
+    for (i = 0; i < FE_IAP_SECTOR; i++)
+        iap_write((u16)(base + i), page[i]);
     return TRUE;
 }
 
+// 读 u32（小端 4 字节）
 u8 fe_port_eeprom_get_u32(u16 addr, u32 *out) {
-    // TODO: 读 4 字节（小端）
-    (void)addr; (void)out;
-    return FALSE;
-}
-
-u8 fe_port_eeprom_set_u32(u16 addr, u32 value) {
-    // TODO: 写 4 字节（小端）
-    (void)addr; (void)value;
+    u8 i;
+    u32 v = 0;
+    if (!out) return FALSE;
+    for (i = 0; i < 4; i++)
+        v |= (u32)iap_read((u16)(addr + i)) << (8 * i);
+    *out = v;
     return TRUE;
 }
 
+// 写 u32（小端 4 字节）——逐字节写入（同一扇区，事务由调用方保证）
+u8 fe_port_eeprom_set_u32(u16 addr, u32 value) {
+    u16 base = (u16)(addr & (u16)~(FE_IAP_SECTOR - 1));
+    u16 i, off = (u16)(addr - base);
+    __xdata u8 page[FE_IAP_SECTOR];
+    for (i = 0; i < FE_IAP_SECTOR; i++)
+        page[i] = iap_read((u16)(base + i));
+    for (i = 0; i < 4; i++)
+        page[off + i] = (u8)(value >> (8 * i));
+    iap_erase(base);
+    for (i = 0; i < FE_IAP_SECTOR; i++)
+        iap_write((u16)(base + i), page[i]);
+    return TRUE;
+}
 // ============================================================
-// 系统时间
+// 系统时间——定时器 0（模式 1, 16 位）秒中断计数
+// 首次调用时自动初始化；epoch = 基准 + 已计数秒数。
 // ============================================================
+static volatile u32 s_epoch_base;     // fe_port_time_set 设定的基准
+static volatile u16 s_second_count;   // 距最近整秒的 50ms 中断计数
+static volatile u8  s_timer0_ready;   // 定时器 0 是否已初始化
+
+// 定时器 0 中断：50ms 一次，20 次 = 1s
+static void timer0_isr(void) __interrupt(1) {
+    TH0 = (u8)((65536UL - FOSC / 12UL / 20UL) >> 8);
+    TL0 = (u8)(65536UL - FOSC / 12UL / 20UL);
+    if (++s_second_count >= 20) {
+        s_second_count = 0;
+        s_epoch_base++;
+    }
+}
+
+static void timer0_start(void) {
+    if (s_timer0_ready) return;
+    s_timer0_ready = 1;
+    s_second_count = 0;
+    TMOD = (TMOD & 0xF0) | 0x01;   // 定时器0 模式1（16 位）
+    TH0 = (u8)((65536UL - FOSC / 12UL / 20UL) >> 8);
+    TL0 = (u8)(65536UL - FOSC / 12UL / 20UL);
+    ET0 = 1;                       // 开定时器0 中断
+    EA  = 1;                       // 开总中断
+    TR0 = 1;                       // 启动
+}
+
 u32 fe_port_time_now(void) {
-    // TODO: 定时器 0 秒中断计数返回 epoch 秒
-    return 0;
+    timer0_start();
+    return s_epoch_base;
 }
 
 void fe_port_time_set(u32 epoch) {
-    // TODO: 设置计数基准
-    (void)epoch;
+    timer0_start();
+    s_epoch_base = epoch;
 }
 
 // ============================================================
 // 随机数
 // ============================================================
 void fe_port_random_fill(u8 *buf, u16 len) {
+    static u32 state = 0xFE51C51u;
     u16 i;
-    // TODO: 熵源建议：未初始化 RAM、定时器低字节、ADC 噪声
-    for (i = 0; i < len; i++) buf[i] = (u8)(i * 31 + 7);
+    timer0_start();
+    state ^= (u32)TL0 << 8 | TH0;            // 定时器低字节混入熵
+    for (i = 0; i < len; i++) {
+        // xorshift32
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        buf[i] = (u8)(state >> 24);
+    }
 }
 
 // ============================================================

@@ -34,8 +34,32 @@ fe_output_t ability_time_dispatch(void *inst, const char *act, const char *args)
         return fe_ok(act, out);
     }
     if (strcmp(act, "configure_run") == 0) {
-        // TODO: 配置周期校时，在 main 调度中实现
-        return fe_ok(act, "configured");
+        u32 interval;
+        char out[80];
+        if (!args || !args[0]) {
+            fe_snprintf(out, sizeof(out),
+                        "{\"enabled\":%s,\"interval\":%lu,\"nextRun\":%lu}",
+                        self->run_enabled ? "true" : "false",
+                        (unsigned long)self->run_interval,
+                        (unsigned long)self->next_run);
+            return fe_ok(act, out);
+        }
+        interval = (u32)strtoul(args, NULL, 10);
+        if (interval == 0) {
+            self->run_enabled = FALSE;
+            self->run_interval = 0;
+            self->next_run = 0;
+        } else {
+            self->run_enabled = TRUE;
+            self->run_interval = interval;
+            self->next_run = fe_port_time_now() + interval;
+        }
+        fe_snprintf(out, sizeof(out),
+                    "{\"enabled\":%s,\"interval\":%lu,\"nextRun\":%lu}",
+                    self->run_enabled ? "true" : "false",
+                    (unsigned long)self->run_interval,
+                    (unsigned long)self->next_run);
+        return fe_ok(act, out);
     }
     return fe_err(act, "unsupported command");
 }
