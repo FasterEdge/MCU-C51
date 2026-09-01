@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────
+// FasterEdge 开源项目
+// Github: https://github.com/FasterEdge
+// Gitee:  https://gitee.com/FasterEdge
+// ─────────────────────────────────────────────────────────────
 // ability_gpio.c — GpioAbility 实现（C51/8051 版，MCU 专有）
 // MCU 专有能力：8051 端口 GPIO 控制。
 //   mode <port>,<input|output>  设置端口方向（示意，准双向口无实质方向寄存器）
