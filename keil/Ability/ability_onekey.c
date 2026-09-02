@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // ability_onekey.c — OneKeyAbility 实现（C51/8051 版）
 // 令牌 = HMAC-SHA256(secret, "seq:subject")，并在 EEPROM 中登记活动序列与主题。
 #include "fe_ability.h"

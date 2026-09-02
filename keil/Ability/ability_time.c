@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // ability_time.c — TimeAbility 实现（C51/8051 版）
 // sync_manual / sync_system / get_time / configure_run
 // C51 无网络，不含 sync_ntp/sync_net。时间源由 fe_port 抽象

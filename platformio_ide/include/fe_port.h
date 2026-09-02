@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // fe_port.h — FasterEdge MCU 平台移植层（C51/8051 版）
 // 平台相关能力在此抽象：UART 收发、EEPROM 存储（模拟 NVS）、
 // 系统时间（定时器）、随机数。C51 无网络，不提供 WiFi/TCP。

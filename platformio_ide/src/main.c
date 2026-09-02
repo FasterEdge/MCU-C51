@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // main.c — FasterEdge MCU C51/8051 入口
 // 串口命令解释器：输入 "data_xxx act args" / "ability_xxx act args"
 // 示例：

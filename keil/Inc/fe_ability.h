@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // fe_ability.h — FasterEdge MCU Ability 模块声明（C51/8051 版）
 // 8 位机合理子集：Base / Role / Time / OneKey / Serial / Modbus
 // 排除：MQTT（无网络）、EdgeRole（无网络心跳）、ConfigFile（与 Data 重复）

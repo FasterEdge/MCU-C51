@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // data_config.c — ConfigData 实现（C51/8051 版）
 // 扁平点号路径 KV 配置（EEPROM 持久化）：get / set / delete / list / snapshot
 // 布局：自 base_addr 起，最多 CFG_SLOTS 个条目，每条目 key[16] + value[32]。

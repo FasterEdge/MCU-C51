@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // ability_serial.c — SerialAbility 实现（C51/8051 版）
 // open / close / write / read / is_open / set_config / get_config / list_ports
 #include "fe_ability.h"

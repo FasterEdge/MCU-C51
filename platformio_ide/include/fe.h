@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // fe.h — FasterEdge MCU 核心框架（C51/8051 版）
 // 面向 Keil C51 编译器的裸机实现：无操作系统、无动态内存、
 // 无 stdint.h 依赖（C51 老版本可能缺失），使用 u8/u16/u32 自定义类型。
