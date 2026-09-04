@@ -5,6 +5,7 @@
 // （RTC 芯片 / 定时器计数）。epoch 用 u32（到 2106 年够用）。
 #include "fe_ability.h"
 #include "fe_port.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,7 +21,13 @@ fe_output_t ability_time_dispatch(void *inst, const char *act, const char *args)
     if (strcmp(act, "sync_manual") == 0) {
         if (!args || args[0] == 0)
             return fe_err(act, "missing epoch");
-        u32 ep = (u32)strtoul(args, NULL, 10);
+        if (args[0] == '-') return fe_err(act, "invalid epoch");
+        char *endp = NULL;
+        errno = 0;
+        unsigned long raw = strtoul(args, &endp, 10);
+        if (errno == ERANGE || *endp != 0)
+            return fe_err(act, "invalid epoch");
+        u32 ep = (u32)raw;
         if (ep == 0) return fe_err(act, "invalid epoch");
         fe_port_time_set(ep);
         self->manual_epoch = ep;
@@ -53,7 +60,8 @@ fe_output_t ability_time_dispatch(void *inst, const char *act, const char *args)
         } else {
             self->run_enabled = TRUE;
             self->run_interval = interval;
-            self->next_run = fe_port_time_now() + interval;
+            u32 now = fe_port_time_now();
+            self->next_run = (interval > 0xFFFFFFFFUL - now) ? 0xFFFFFFFFUL : now + interval;
         }
         fe_snprintf(out, sizeof(out),
                     "{\"enabled\":%s,\"interval\":%lu,\"nextRun\":%lu}",
