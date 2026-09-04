@@ -15,19 +15,166 @@
 // ============================================================
 // 格式化输出
 // ============================================================
-// Keil C51 无标准 snprintf：委托 vsprintf 到临时缓冲后截断。
+// Keil C51 无标准 snprintf/vsnprintf：原实现先 vsprintf 到固定
+// tmp[128] 再截断 —— 格式化结果超 127 字节时 vsprintf 先写穿栈
+// 缓冲（截断逻辑形同虚设），属真实缓冲区溢出缺陷。
+// 改为手写有界格式化核心：逐格式符解析，写满缓冲即停。
+// 支持 %d %i %u %x %X %c %s 及 %ld/%lu/%lx、宽度/零填充/左对齐。
+
+// 追加 len 字节到 dst，超界返回 -1。
+static int fe_fmt_put(char *dst, size_t cap, size_t *pos, const char *s, size_t len) {
+    size_t i;
+    for (i = 0; i < len; i++) {
+        if (*pos + 1 >= cap) return -1;
+        dst[(*pos)++] = s[i];
+    }
+    return 0;
+}
+
+// 无符号整数转十进制/十六进制字符串，返回长度（负值由调用方处理）。
+static int fe_fmt_uint(char *out, size_t ocap, unsigned long v, unsigned base, int upper) {
+    char d[24];
+    int i = 0;
+    if (v == 0) {
+        if (ocap < 2) return -1;
+        out[0] = '0';
+        out[1] = 0;
+        return 1;
+    }
+    while (v > 0 && i < (int)sizeof(d) - 1) {
+        unsigned digit = (unsigned)(v % base);
+        d[i++] = (char)(digit < 10 ? (char)('0' + digit)
+                                   : (char)((upper ? 'A' : 'a') + (int)digit - 10));
+        v /= base;
+    }
+    if ((size_t)i >= ocap) return -1;
+    { int j; for (j = 0; j < i; j++) out[j] = d[i - 1 - j]; }
+    out[i] = 0;
+    return i;
+}
+
+static int fe_vsnprintf_bounded(char *dst, size_t cap, const char *fmt, va_list ap) {
+    size_t pos = 0;
+    const char *p = fmt;
+    if (cap == 0) return 0;
+    while (*p != 0 && pos + 1 < cap) {
+        char conv;
+        int left = 0, zero = 0, width = 0, lng = 0;
+        char num[24];
+        int nlen;
+        if (*p != '%') { dst[pos++] = *p++; continue; }
+        p++;
+        if (*p == '-') { left = 1; p++; }
+        if (*p == '0') { zero = 1; p++; }
+        while (*p >= '0' && *p <= '9') { width = width * 10 + (*p - '0'); p++; }
+        if (*p == 'l') { lng = 1; p++; }
+        conv = *p++;
+        switch (conv) {
+        case 'd':
+        case 'i': {
+            long v = lng ? va_arg(ap, long) : (long)va_arg(ap, int);
+            unsigned long uv = (v < 0) ? (unsigned long)(-v) : (unsigned long)v;
+            char body[24];
+            int bl = fe_fmt_uint(body, sizeof(body), uv, 10, 0);
+            int i2;
+            if (bl < 0) return -1;
+            if (v < 0) {
+                if ((size_t)(bl + 1) >= sizeof(num)) return -1;
+                num[0] = '-';
+                for (i2 = 0; i2 < bl; i2++) num[i2 + 1] = body[i2];
+                nlen = bl + 1;
+            } else {
+                for (i2 = 0; i2 < bl; i2++) num[i2] = body[i2];
+                nlen = bl;
+            }
+            break;
+        }
+        case 'u': {
+            unsigned long v = lng ? va_arg(ap, unsigned long)
+                                  : (unsigned long)va_arg(ap, unsigned int);
+            nlen = fe_fmt_uint(num, sizeof(num), v, 10, 0);
+            if (nlen < 0) return -1;
+            break;
+        }
+        case 'x':
+        case 'X': {
+            unsigned long v = lng ? va_arg(ap, unsigned long)
+                                  : (unsigned long)va_arg(ap, unsigned int);
+            nlen = fe_fmt_uint(num, sizeof(num), v, 16, conv == 'X');
+            if (nlen < 0) return -1;
+            break;
+        }
+        case 'c': {
+            char c = (char)va_arg(ap, int);
+            if (fe_fmt_put(dst, cap, &pos, &c, 1) != 0) return -1;
+            continue;
+        }
+        case 's': {
+            const char *s = va_arg(ap, const char *);
+            size_t sl;
+            if (s == 0) s = "(null)";
+            for (sl = 0; s[sl] != 0; sl++) {
+                if (pos + 1 >= cap) return -1;
+                dst[pos++] = s[sl];
+            }
+            continue;
+        }
+        case '%':
+            if (fe_fmt_put(dst, cap, &pos, "%", 1) != 0) return -1;
+            continue;
+        default: {
+            char cbuf[2];
+            if (fe_fmt_put(dst, cap, &pos, "%", 1) != 0) return -1;
+            cbuf[0] = conv;
+            if (fe_fmt_put(dst, cap, &pos, cbuf, 1) != 0) return -1;
+            continue;
+        }
+        }
+        /* 数字：宽度/零填充/左对齐 */
+        if (nlen < width) {
+            int pad = width - nlen;
+            int i2;
+            if (!left && zero && num[0] == '-') {
+                /* 负号在前，零填充在数字体前：-0012 */
+                if (fe_fmt_put(dst, cap, &pos, num, 1) != 0) return -1;
+                for (i2 = 0; i2 < pad; i2++) {
+                    if (pos + 1 >= cap) return -1;
+                    dst[pos++] = '0';
+                }
+                if (fe_fmt_put(dst, cap, &pos, num + 1, (size_t)(nlen - 1)) != 0) return -1;
+            } else {
+                if (!left) {
+                    for (i2 = 0; i2 < pad; i2++) {
+                        if (pos + 1 >= cap) return -1;
+                        dst[pos++] = (char)(zero ? '0' : ' ');
+                    }
+                }
+                if (fe_fmt_put(dst, cap, &pos, num, (size_t)nlen) != 0) return -1;
+                if (left) {
+                    for (i2 = 0; i2 < pad; i2++) {
+                        if (pos + 1 >= cap) return -1;
+                        dst[pos++] = ' ';
+                    }
+                }
+            }
+        } else {
+            if (fe_fmt_put(dst, cap, &pos, num, (size_t)nlen) != 0) return -1;
+        }
+    }
+    dst[pos] = 0;
+    return (int)pos;
+}
+
 int fe_snprintf(char *buf, u16 size, const char *fmt, ...) {
     va_list ap;
-    char tmp[128];
-    size_t n;
+    int n;
+    if (size == 0) return 0;
     va_start(ap, fmt);
-    vsprintf(tmp, fmt, ap);
+    n = fe_vsnprintf_bounded(buf, size, fmt, ap);
     va_end(ap);
-    n = strlen(tmp);
-    if (n >= size) n = size - 1;
-    memcpy(buf, tmp, n);
-    buf[n] = 0;
-    return (int)n;
+    if (n < 0) n = 0;
+    buf[size - 1] = 0; /* 保证终止 */
+    return n;
 }
 
 // ============================================================
