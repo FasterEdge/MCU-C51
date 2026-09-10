@@ -1,0 +1,39 @@
+# FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
+# MCU 固件 CI: 工程完整性检查。
+# 说明: 本仓库固件主工程为 Keil(闭源工具链, CI 无法编译); platformio_ide 为 SDCC 移植骨架
+# (struct 返回/函数指针需 reentrant 等 8051 限制未完成), 故 CI 校验工程结构与源码完整性。
+name: '工程完整性检查'
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'Keil 工程结构检查'
+        run: |
+          set -e
+          [ -d keil ] || [ -d MDK-ARM ] || { echo "缺失 keil/ 或 MDK-ARM/ 工程目录"; exit 1; }
+          echo "  Keil 工程目录存在"
+          uvproj=$(find . -name '*.uvproj' -not -path './.git/*' | head -1)
+          if [ -n "$uvproj" ]; then echo "  Keil 工程文件: $uvproj"; else echo "  (未找到 .uvproj, 以目录结构为准)"; fi
+      - name: 'platformio_ide 源码完整性'
+        run: |
+          set -e
+          [ -f platformio_ide/platformio.ini ] || { echo "缺失 platformio_ide/platformio.ini"; exit 1; }
+          n=$(find platformio_ide/src -name '*.c' 2>/dev/null | wc -l)
+          echo "  platformio_ide/src 源码文件数: $n"
+          [ "$n" -gt 0 ] || { echo "platformio_ide/src 无 C 源码"; exit 1; }
+      - name: 'README 与关键文件'
+        run: |
+          for f in README.md; do
+            [ -f "$f" ] || { echo "缺失 $f"; exit 1; }
+          done
+          echo "  关键文件齐全"
