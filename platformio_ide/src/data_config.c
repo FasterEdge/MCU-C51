@@ -100,7 +100,7 @@ fe_output_t data_config_dispatch(void *inst, const char *act, const char *args) 
         for (i = 0; i < CFG_SLOTS; i++) {
             char k[CFG_KEY_LEN];
             u16 addr = base + (u16)(i * CFG_ENTRY);
-            if (!fe_port_eeprom_get_str(addr, k, sizeof(k)) || k[0] == 0) continue;
+            if (!fe_port_eeprom_get_str(addr, k, sizeof(k)) || k[0] == 0 || (u8)k[0] == 0xff) continue;
             if (n) out[n++] = ',';
             n += (u16)fe_snprintf(out + n, sizeof(out) - n, "\"%s\"", k);
         }
@@ -119,7 +119,7 @@ fe_output_t data_config_dispatch(void *inst, const char *act, const char *args) 
         for (i = 0; i < CFG_SLOTS; i++) {
             char k[CFG_KEY_LEN], v[CFG_VAL_LEN];
             u16 addr = base + (u16)(i * CFG_ENTRY);
-            if (!fe_port_eeprom_get_str(addr, k, sizeof(k)) || k[0] == 0) continue;
+            if (!fe_port_eeprom_get_str(addr, k, sizeof(k)) || k[0] == 0 || (u8)k[0] == 0xff) continue;
             fe_port_eeprom_get_str(addr + CFG_KEY_LEN, v, sizeof(v));
             if (n + 6 >= sizeof(out)) break;
             if (out[n - 1] != '{') out[n++] = ',';
