@@ -69,13 +69,17 @@ fe_output_t data_config_dispatch(void *inst, const char *act, const char *args) 
             for (i = 0; i < CFG_SLOTS; i++) {
                 char k[CFG_KEY_LEN];
                 if (!fe_port_eeprom_get_str(base + (u16)(i * CFG_ENTRY), k, sizeof(k)) ||
-                    k[0] == 0) { slot = i; break; }
+                    k[0] == 0 || (u8)k[0] == 0xff) { slot = i; break; }
             }
             if (slot < 0) return fe_err(act, "config full");
             fe_port_eeprom_set_str(base + (u16)(slot * CFG_ENTRY), key);
         }
         addr = base + (u16)(slot * CFG_ENTRY) + CFG_KEY_LEN;
-        fe_port_eeprom_set_str(addr, eq + 1);
+{
+            char v[CFG_VAL_LEN];
+            fe_snprintf(v, sizeof(v), "%s", eq + 1);
+            fe_port_eeprom_set_str(addr, v);
+        }
         return fe_ok(act, "saved");
     }
     if (strcmp(act, "delete") == 0) {

@@ -352,6 +352,9 @@ u8 fe_port_eeprom_set_str(u16 addr, const char *value) {
         if (!eeprom_write_byte((u16)(addr + i), (u8)value[i])) return FALSE;
         fe_port_delay_ms(5);     // 24Cxx 内部写周期
     }
+    // 写 NUL 结束符: 否则读回带 0xFF/残留脏尾, strcmp 无法匹配; 且 delete 传 ""
+    // 时循环零次执行、零字节写入, 删除不落地。
+    if (!eeprom_write_byte((u16)(addr + i), 0)) return FALSE;
     return TRUE;
 }
 

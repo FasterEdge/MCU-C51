@@ -68,14 +68,22 @@ fe_output_t data_config_dispatch(void *inst, const char *act, const char *args) 
         if (slot < 0) {   // 找空槽
             for (i = 0; i < CFG_SLOTS; i++) {
                 char k[CFG_KEY_LEN];
+                // 空槽判定: k[0]==0(删除标记) 或 0xFF(全新器件 EEPROM 擦除态)均视为空,
+                // 否则首次 set 会误判"已占用"而报 config full。
                 if (!fe_port_eeprom_get_str(base + (u16)(i * CFG_ENTRY), k, sizeof(k)) ||
-                    k[0] == 0) { slot = i; break; }
+                    k[0] == 0 || (u8)k[0] == 0xff) { slot = i; break; }
             }
             if (slot < 0) return fe_err(act, "config full");
             fe_port_eeprom_set_str(base + (u16)(slot * CFG_ENTRY), key);
         }
         addr = base + (u16)(slot * CFG_ENTRY) + CFG_KEY_LEN;
-        fe_port_eeprom_set_str(addr, eq + 1);
+        {
+            // 值截断到 CFG_VAL_LEN-1: 未校验长度会写穿本槽 value 区, 覆盖相邻槽的
+            // key 甚至越过配置区(如 C51 末槽 value@0x2E0 可越界写 0x0300 的 HMAC 密钥)。
+            char v[CFG_VAL_LEN];
+            fe_snprintf(v, sizeof(v), "%s", eq + 1);
+            fe_port_eeprom_set_str(addr, v);
+        }
         return fe_ok(act, "saved");
     }
     if (strcmp(act, "delete") == 0) {
