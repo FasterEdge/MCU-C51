@@ -12,6 +12,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+// 默认晶振频率：keil 工程(uvproj)未通过 <Define> 注入 FOSC，此处补默认值，
+// 与 platformio 版 fe_port.c 一致（可在编译时 -DFOSC=... 覆盖）。
+#ifndef FOSC
+#define FOSC 12000000UL
+#endif
+
 // ============================================================
 // 格式化输出
 // ============================================================
@@ -189,8 +195,10 @@ static u8 baud_reload(u32 baud) {
     u8 v = 0;
     if (baud > 0) {
         t /= baud;
-        if (t < 256) v = (u8)(256 - t);
-        else v = 1;
+        // t==0(波特率超出 12MHz 晶振上限, 如 115200)或 t>=256 时, 256-t 会回绕
+        // 成 TH1=0/1(静默得到 ~122 波特); 回退到 9600@12MHz 的重载值 253 (t=3)。
+        if (t > 0 && t < 256) v = (u8)(256 - t);
+        else v = (u8)(256 - 3);
     }
     return v;
 }
