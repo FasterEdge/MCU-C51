@@ -23,6 +23,7 @@ static u8 read_line(char *buf, u16 buflen, u16 *len) {
         if (c < 0) break;
         if (c == '\n' || c == '\r') {
             if (line_len == 0) continue;
+            if (line_len >= buflen) line_len = (u16)(buflen - 1);
             memcpy(buf, line, line_len);
             buf[line_len] = 0;
             *len = line_len;
