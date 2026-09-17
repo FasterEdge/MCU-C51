@@ -310,19 +310,30 @@ u8 fe_port_eeprom_get_str(u16 addr, char *out, u16 outlen) {
     return TRUE;
 }
 
-// 写字符串：读回所在扇区、更新、擦除、重写（原子扇区替换）
+// 写字符串：跨扇区安全——按扇区读-改-写, 直到 NUL 写完。旧实现单扇区
+// 截断(off+i<SECTOR), 槽 10 value(0x1F0)跨 512B 扇区边界时后半丢失。
 u8 fe_port_eeprom_set_str(u16 addr, const char *value) {
     u16 base = (u16)(addr & (u16)~(FE_IAP_SECTOR - 1));
-    u16 i, off = (u16)(addr - base);
+    u16 off = (u16)(addr - base);
+    u16 vi = 0;
     __xdata u8 page[FE_IAP_SECTOR];  // SDCC：显式 xdata（8051 片上 RAM 仅 256B）
-    for (i = 0; i < FE_IAP_SECTOR; i++)
-        page[i] = iap_read((u16)(base + i));
-    for (i = 0; value[i] && off + i < FE_IAP_SECTOR; i++)
-        page[off + i] = (u8)value[i];
-    if (off + i < FE_IAP_SECTOR) page[off + i] = 0;
-    iap_erase(base);
-    for (i = 0; i < FE_IAP_SECTOR; i++)
-        iap_write((u16)(base + i), page[i]);
+    for (;;) {
+        u16 i;
+        u8 done = 0;
+        for (i = 0; i < FE_IAP_SECTOR; i++)
+            page[i] = iap_read((u16)(base + i));
+        for (i = 0; off + i < FE_IAP_SECTOR; i++) {
+            u8 c = (u8)value[vi++];
+            page[off + i] = c;
+            if (c == 0) { done = 1; break; }
+        }
+        iap_erase(base);
+        for (i = 0; i < FE_IAP_SECTOR; i++)
+            iap_write((u16)(base + i), page[i]);
+        if (done) break;
+        base = (u16)(base + FE_IAP_SECTOR);
+        off = 0;
+    }
     return TRUE;
 }
 
@@ -337,18 +348,26 @@ u8 fe_port_eeprom_get_u32(u16 addr, u32 *out) {
     return TRUE;
 }
 
-// 写 u32（小端 4 字节）——逐字节写入（同一扇区，事务由调用方保证）
+// 写 u32（小端 4 字节）——跨扇区安全: 按扇区读-改-写直到 4 字节写完
 u8 fe_port_eeprom_set_u32(u16 addr, u32 value) {
+    u8 b[4];
+    u16 i;
     u16 base = (u16)(addr & (u16)~(FE_IAP_SECTOR - 1));
-    u16 i, off = (u16)(addr - base);
+    u16 off = (u16)(addr - base);
+    u16 wi = 0;
     __xdata u8 page[FE_IAP_SECTOR];
-    for (i = 0; i < FE_IAP_SECTOR; i++)
-        page[i] = iap_read((u16)(base + i));
-    for (i = 0; i < 4; i++)
-        page[off + i] = (u8)(value >> (8 * i));
-    iap_erase(base);
-    for (i = 0; i < FE_IAP_SECTOR; i++)
-        iap_write((u16)(base + i), page[i]);
+    for (i = 0; i < 4; i++) b[i] = (u8)(value >> (8 * i));
+    while (wi < 4) {
+        for (i = 0; i < FE_IAP_SECTOR; i++)
+            page[i] = iap_read((u16)(base + i));
+        for (i = 0; off + i < FE_IAP_SECTOR && wi < 4; i++)
+            page[off + i] = b[wi++];
+        iap_erase(base);
+        for (i = 0; i < FE_IAP_SECTOR; i++)
+            iap_write((u16)(base + i), page[i]);
+        base = (u16)(base + FE_IAP_SECTOR);
+        off = 0;
+    }
     return TRUE;
 }
 // ============================================================
