@@ -15,7 +15,7 @@ jobs:
   integrity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: '主工程目录检查(keil/MDK-ARM/arduino 任一)'
         run: |
           set -e
