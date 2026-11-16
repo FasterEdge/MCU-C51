@@ -18,7 +18,7 @@ fe_output_t data_base_dispatch(void *inst, const char *act, const char *args) {
     }
     if (strcmp(act, "info") == 0) {
         return fe_ok(act,
-            "{\"name\":\"BaseData\",\"firmware\":\"FasterEdge-MCU 1.0.20261022\","
+            "{\"name\":\"BaseData\",\"firmware\":\"FasterEdge-MCU 1.0.20261116\","
             "\"chip\":\"8051\",\"sdk\":\"Keil C51\"}");
     }
     return fe_err(act, "unsupported command");
